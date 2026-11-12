@@ -53,7 +53,11 @@ async def save_product_image(file: UploadFile) -> str:
     if len(data) > limit:
         raise HTTPException(413, f"Ukuran gambar maksimal {settings.max_upload_mb} MB")
 
-    webp = compress_image(data)
+    return store_webp(compress_image(data))
+
+
+def store_webp(webp: bytes) -> str:
+    """Simpan gambar WebP (sudah dikompres) ke R2 atau disk lokal, kembalikan URL publiknya."""
     key = f"products/{uuid.uuid4().hex}.webp"
 
     if settings.r2_enabled:

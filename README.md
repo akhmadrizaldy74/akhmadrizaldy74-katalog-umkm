@@ -6,18 +6,27 @@ Dibangun **multi-cloud dengan biaya Rp0**: Oracle Cloud Always Free, AWS Always 
 
 ![CI](https://github.com/akhmadrizaldy74/akhmadrizaldy74-katalog-umkm/actions/workflows/ci.yml/badge.svg)
 
-| Katalog | Detail produk |
+| Katalog | Detail produk + galeri foto |
 |---|---|
 | ![Katalog](docs/screenshots/katalog.png) | ![Detail](docs/screenshots/detail.png) |
 | **Keranjang & checkout** | **Pesanan berhasil** |
 | ![Keranjang](docs/screenshots/keranjang.png) | ![Sukses](docs/screenshots/pesanan-sukses.png) |
-| **Dashboard admin** | **Kelola pesanan** |
-| ![Dashboard](docs/screenshots/admin-dashboard.png) | ![Pesanan](docs/screenshots/admin-pesanan.png) |
+| **Masuk (satu portal)** | **Mode admin di katalog** |
+| ![Masuk](docs/screenshots/login.png) | ![Mode admin](docs/screenshots/katalog-admin.png) |
+| **Edit produk & foto** | **Dashboard admin** |
+| ![Edit produk](docs/screenshots/edit-produk.png) | ![Dashboard](docs/screenshots/admin-dashboard.png) |
+| **Kelola produk & stok** | **Kelola pesanan** |
+| ![Produk](docs/screenshots/admin-produk.png) | ![Pesanan](docs/screenshots/admin-pesanan.png) |
 
 ## ✨ Fitur
 
+**Satu portal**
+- Toko dan panel admin ada di **satu web**: tombol **Masuk** di pojok kanan atas, tidak perlu buka situs terpisah
+- Setelah login, katalog masuk **mode admin**: tombol ✏️ di tiap produk, kartu "+ Produk baru", produk tersembunyi tetap terlihat, dan bar admin (Dashboard · Pesanan baru · Produk)
+
 **Pembeli**
-- Katalog dengan pencarian, filter kategori, dan pagination
+- Katalog bergambar dengan pencarian, filter kategori, **urutkan harga/nama**, dan pagination
+- Detail produk dengan **galeri foto** (thumbnail + panah), badge stok menipis/habis
 - Keranjang belanja (tersimpan di browser)
 - Checkout yang membuka WhatsApp penjual dengan pesan otomatis (kode pesanan, rincian, total, alamat)
 - Tampilan responsif, nyaman dibuka di HP
@@ -25,7 +34,9 @@ Dibangun **multi-cloud dengan biaya Rp0**: Oracle Cloud Always Free, AWS Always 
 **Admin**
 - Login JWT
 - Dashboard: pendapatan, pesanan baru, stok menipis, produk terlaris
-- CRUD produk dan kategori; upload foto yang **otomatis di-resize dan dikonversi ke WebP**
+- CRUD produk dan kategori; **galeri hingga 8 foto per produk** (unggah banyak sekaligus / drag & drop, pilih sampul, hapus), otomatis di-resize dan dikonversi ke WebP
+- Ubah stok langsung di tabel (−/+), filter stok menipis / disembunyikan / tanpa foto
+- Dashboard: pesanan terbaru & daftar produk yang perlu restok; cari pesanan berdasarkan kode, nama, atau no. HP
 - Kelola status pesanan (Menunggu → Dikonfirmasi → Dikirim → Selesai / Dibatalkan); **stok kembali otomatis** saat pesanan dibatalkan
 - Pengaturan nama toko dan nomor WhatsApp
 
@@ -93,11 +104,11 @@ deploy/             docker-compose.prod.yml, Caddyfile
 ```bash
 cp .env.example .env
 docker compose up --build
-docker compose exec api python -m app.seed   # data contoh
+docker compose exec api python -m app.seed   # data contoh + foto produk
 ```
 
 - Toko: http://localhost:5173
-- Admin: http://localhost:5173/admin (login `admin@tokoku.id` / `admin12345`)
+- Admin: klik **Masuk** di toko (http://localhost:5173/masuk), login `admin@tokoku.id` / `admin12345`
 - Dokumentasi API (Swagger): http://localhost:8000/docs
 
 ### Opsi B: Tanpa Docker
@@ -199,14 +210,15 @@ Kalau frontend sudah terhubung langsung ke Cloudflare Pages lewat Git (langkah 2
 
 | Method | Endpoint | Akses |
 |---|---|---|
-| `GET` | `/api/products?q=&category=&page=` | publik |
+| `GET` | `/api/products?q=&category=&sort=&page=` (`sort`: newest, price_asc, price_desc, name) | publik |
 | `GET` | `/api/products/{slug}` | publik |
 | `GET` | `/api/categories` · `/api/store` | publik |
 | `POST` | `/api/orders` → `{ order, whatsapp_url }` | publik |
 | `POST` | `/api/auth/login` | publik |
 | `POST/PUT/DELETE` | `/api/products`, `/api/categories` | admin |
-| `POST` | `/api/products/{id}/image` | admin |
-| `GET` | `/api/orders` · `PATCH /api/orders/{id}/status` | admin |
+| `POST` | `/api/products/{id}/image` (sampul) · `/api/products/{id}/images` (galeri, banyak file) | admin |
+| `PUT` · `DELETE` | `/api/products/{id}/images/{image_id}/cover` · `/api/products/{id}/images/{image_id}` | admin |
+| `GET` | `/api/orders?status=&q=` · `PATCH /api/orders/{id}/status` | admin |
 | `GET` | `/api/admin/stats` | admin |
 
 Dokumentasi interaktif lengkap tersedia di `/docs`.
@@ -218,6 +230,11 @@ Dokumentasi interaktif lengkap tersedia di `/docs`.
 - [ ] Varian produk (ukuran/warna)
 - [ ] Multi-toko (SaaS untuk banyak UMKM)
 - [ ] Monitoring Grafana + Prometheus di VM Oracle
+
+## 🖼️ Foto produk contoh
+
+Foto produk demo adalah ilustrasi buatan sendiri (`backend/app/seed_images/`, dibuat dengan `scripts/seed-art.js`), jadi bebas dipakai. Ganti dengan foto asli lewat tombol ✏️ di katalog atau menu Produk.
+Menjalankan `python -m app.seed` di database yang sudah berisi produk hanya menambahkan foto contoh ke produk demo yang belum punya foto.
 
 ## 📄 Lisensi
 

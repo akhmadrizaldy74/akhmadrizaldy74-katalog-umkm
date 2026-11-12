@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_admin
@@ -55,12 +55,18 @@ def create_order(body: OrderIn, background: BackgroundTasks, db: Session = Depen
 @router.get("", response_model=list[OrderOut], dependencies=[Depends(require_admin)])
 def list_orders(
     status: OrderStatus | None = None,
+    q: str | None = Query(default=None, max_length=100, description="cari kode, nama, atau no. HP"),
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
     stmt = select(Order).options(selectinload(Order.items)).order_by(Order.created_at.desc(), Order.id.desc())
     if status:
         stmt = stmt.where(Order.status == status)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(
+            or_(Order.code.ilike(like), Order.customer_name.ilike(like), Order.customer_phone.ilike(like))
+        )
     return db.scalars(stmt.limit(limit)).all()
 
 
