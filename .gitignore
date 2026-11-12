@@ -1,0 +1,26 @@
+# env & secrets
+.env
+*.tfvars
+!*.tfvars.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.db
+backend/uploads/
+
+# node
+node_modules/
+dist/
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.zip
+
+.DS_Store

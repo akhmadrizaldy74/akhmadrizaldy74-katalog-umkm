@@ -1,0 +1,21 @@
+#cloud-config
+# Dijalankan sekali saat VM pertama kali menyala.
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - ca-certificates
+  - curl
+  - fail2ban
+runcmd:
+  # Docker Engine + compose plugin
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  # Image Ubuntu di OCI memblokir port lewat iptables bawaan — buka 80/443
+  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+  # Swap 2 GB untuk jaga-jaga saat build image
+  - fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - systemctl enable --now fail2ban
