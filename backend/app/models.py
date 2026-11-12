@@ -55,6 +55,23 @@ class Product(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     category: Mapped[Category | None] = relationship(back_populates="products")
+    images: Mapped[list["ProductImage"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan", order_by="ProductImage.position, ProductImage.id"
+    )
+
+
+class ProductImage(Base):
+    """Galeri foto produk. Foto sampul tetap disimpan di Product.image_url."""
+
+    __tablename__ = "product_images"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    url: Mapped[str] = mapped_column(String(500))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    product: Mapped[Product] = relationship(back_populates="images")
 
 
 class OrderStatus(str, enum.Enum):

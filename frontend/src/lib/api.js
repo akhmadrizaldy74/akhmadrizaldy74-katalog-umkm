@@ -29,8 +29,9 @@ function errorMessage(body) {
 }
 
 export async function api(path, { method = "GET", body, form, params } = {}) {
+  // params: objek query string; nilai undefined / "" / false dilewati
   const url = new URL(API_URL + path);
-  Object.entries(params || {}).forEach(([k, v]) => v !== undefined && v !== "" && url.searchParams.set(k, v));
+  Object.entries(params || {}).forEach(([k, v]) => v !== undefined && v !== "" && v !== false && url.searchParams.set(k, v));
 
   const headers = {};
   if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
@@ -40,7 +41,10 @@ export async function api(path, { method = "GET", body, form, params } = {}) {
   if (res.status === 204) return null;
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    if (res.status === 401 && path !== "/api/auth/login") auth.clear();
+    if (res.status === 401 && path !== "/api/auth/login") {
+      auth.clear();
+      window.dispatchEvent(new Event("auth:logout"));
+    }
     throw new ApiError(res.status, errorMessage(data));
   }
   return data;

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.auth import require_admin
 from app.database import get_db
 from app.models import Order, OrderItem, OrderStatus, Product
-from app.schemas import StatsOut, TopProduct
+from app.schemas import LowStockProduct, StatsOut, TopProduct
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -37,4 +37,13 @@ def stats(db: Session = Depends(get_db)):
         orders_by_status=by_status,
         revenue=db.scalar(select(func.coalesce(func.sum(Order.total), 0)).where(Order.status.in_(PAID_STATUSES))),
         top_products=[TopProduct(product_name=n, quantity=int(q)) for n, q in top],
+        low_stock_products=[
+            LowStockProduct.model_validate(p)
+            for p in db.scalars(
+                select(Product)
+                .where(Product.is_active.is_(True), Product.stock <= LOW_STOCK)
+                .order_by(Product.stock, Product.name)
+                .limit(8)
+            )
+        ],
     )

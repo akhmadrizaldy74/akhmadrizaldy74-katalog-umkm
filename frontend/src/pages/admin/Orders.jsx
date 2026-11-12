@@ -6,18 +6,20 @@ const FLOW = ["pending", "confirmed", "shipped", "done", "cancelled"];
 
 export default function Orders() {
   const [status, setStatus] = useState("");
+  const [q, setQ] = useState("");
   const [orders, setOrders] = useState(null);
   const [open, setOpen] = useState(null);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    api("/api/orders", { params: { status } })
+    api("/api/orders", { params: { status, q } })
       .then(setOrders)
       .catch((e) => setError(e.message));
-  }, [status]);
+  }, [status, q]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(load, 250);
+    return () => clearTimeout(t);
   }, [load]);
 
   async function changeStatus(order, next) {
@@ -34,6 +36,7 @@ export default function Orders() {
   return (
     <>
       <h1>Pesanan</h1>
+      <input className="input search" type="search" placeholder="Cari kode, nama, atau no. HP…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="chips">
         <button className={`chip ${!status ? "active" : ""}`} onClick={() => setStatus("")}>Semua</button>
         {FLOW.map((s) => (

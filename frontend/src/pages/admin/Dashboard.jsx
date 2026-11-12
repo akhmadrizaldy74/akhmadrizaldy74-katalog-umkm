@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api.js";
-import { rupiah, STATUS_LABEL } from "../../lib/format.js";
+import { useEditor } from "../../lib/editor.jsx";
+import { dateTime, rupiah, STATUS_LABEL } from "../../lib/format.js";
+import ProductImage from "../../components/ProductImage.jsx";
 
 export default function Dashboard() {
+  const editor = useEditor();
   const [stats, setStats] = useState(null);
+  const [recent, setRecent] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     api("/api/admin/stats").then(setStats).catch((e) => setError(e.message));
-  }, []);
+    api("/api/orders", { params: { limit: 5 } }).then(setRecent).catch(() => {});
+  }, [editor.version]);
 
   if (error) return <p className="alert alert-error">{error}</p>;
   if (!stats) return <p className="muted">Memuat…</p>;
@@ -18,7 +23,13 @@ export default function Dashboard() {
 
   return (
     <>
-      <h1>Dashboard</h1>
+      <div className="page-head">
+        <h1>Dashboard</h1>
+        <div className="actions">
+          <Link to="/" className="btn">🏪 Lihat toko</Link>
+          <button className="btn btn-primary" onClick={editor.create}>+ Produk Baru</button>
+        </div>
+      </div>
       <div className="stats">
         <Stat label="Pendapatan" value={rupiah(stats.revenue)} hint="dikonfirmasi, dikirim & selesai" />
         <Stat label="Pesanan baru" value={stats.orders_by_status.pending} hint={<Link to="/admin/pesanan">lihat →</Link>} />
@@ -47,6 +58,48 @@ export default function Dashboard() {
                 <span>{t.product_name}</span>
                 <div className="bar"><div style={{ width: `${(t.quantity / maxQty) * 100}%` }} /></div>
                 <strong>{t.quantity}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <div className="two-col mt">
+        <section className="card pad">
+          <div className="section-head">
+            <h2>Pesanan Terbaru</h2>
+            <Link to="/admin/pesanan" className="small">Semua →</Link>
+          </div>
+          {recent.length === 0 && <p className="muted">Belum ada pesanan.</p>}
+          <ul className="mini-list">
+            {recent.map((o) => (
+              <li key={o.id}>
+                <div>
+                  <strong className="code">{o.code}</strong> <span className="muted small">· {o.customer_name}</span>
+                  <div className="muted tiny">{dateTime(o.created_at)}</div>
+                </div>
+                <div className="order-right">
+                  <strong>{rupiah(o.total)}</strong>
+                  <span className={`status status-${o.status}`}>{STATUS_LABEL[o.status]}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="card pad">
+          <div className="section-head">
+            <h2>Perlu Restok</h2>
+            <Link to="/admin/produk" className="small">Kelola →</Link>
+          </div>
+          {stats.low_stock_products.length === 0 && <p className="muted">Semua stok aman 👍</p>}
+          <ul className="mini-list">
+            {stats.low_stock_products.map((p) => (
+              <li key={p.id}>
+                <div className="mini-prod">
+                  <ProductImage product={p} className="thumb" />
+                  <span>{p.name}</span>
+                </div>
+                <span className={p.stock === 0 ? "text-danger" : "text-warn"}>{p.stock === 0 ? "Habis" : `Sisa ${p.stock}`}</span>
               </li>
             ))}
           </ul>

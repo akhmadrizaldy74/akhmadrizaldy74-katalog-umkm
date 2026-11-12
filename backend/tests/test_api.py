@@ -138,3 +138,68 @@ def test_image_upload_rejects_non_image(client, admin_headers, product):
         headers=admin_headers,
     )
     assert r.status_code == 400
+
+
+def _jpeg(color="orange", size=(400, 300)) -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", size, color).save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+def test_gallery_upload_cover_and_delete(client, admin_headers, product):
+    pid = product["id"]
+    r = client.post(
+        f"/api/products/{pid}/images",
+        files=[("files", (f"{c}.jpg", _jpeg(c), "image/jpeg")) for c in ("red", "green", "blue")],
+        headers=admin_headers,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["images"]) == 3
+    assert data["image_url"] == data["images"][0]["url"]  # foto pertama otomatis jadi sampul
+
+    third = data["images"][2]
+    data = client.put(f"/api/products/{pid}/images/{third['id']}/cover", headers=admin_headers).json()
+    assert data["image_url"] == third["url"]
+    assert data["images"][0]["id"] == third["id"]
+
+    data = client.delete(f"/api/products/{pid}/images/{third['id']}", headers=admin_headers).json()
+    assert len(data["images"]) == 2
+    assert data["image_url"] == data["images"][0]["url"]
+
+    # publik ikut melihat galeri
+    assert len(client.get(f"/api/products/{product['slug']}").json()["images"]) == 2
+
+
+def test_gallery_requires_admin_and_has_limit(client, admin_headers, product):
+    pid = product["id"]
+    files = [("files", ("a.jpg", _jpeg(), "image/jpeg"))]
+    assert client.post(f"/api/products/{pid}/images", files=files).status_code == 401
+    r = client.post(f"/api/products/{pid}/images", files=files * 9, headers=admin_headers)
+    assert r.status_code == 400
+
+
+def test_product_sorting(client, admin_headers, product):
+    client.post("/api/products", json={"name": "Batik Mahal", "price": 500000, "stock": 1}, headers=admin_headers)
+    client.post("/api/products", json={"name": "Air Murah", "price": 3000, "stock": 1}, headers=admin_headers)
+    prices = lambda sort: [p["price"] for p in client.get("/api/products", params={"sort": sort}).json()["items"]]  # noqa: E731
+    assert prices("price_asc") == [3000, 15000, 500000]
+    assert prices("price_desc") == [500000, 15000, 3000]
+    assert client.get("/api/products", params={"sort": "ngawur"}).status_code == 422
+
+
+def test_order_search(client, admin_headers, product):
+    order = client.post("/api/orders", json=ORDER | {"items": [{"product_id": product["id"], "quantity": 1}]}).json()
+    code = order["order"]["code"]
+    found = client.get("/api/orders", params={"q": code.lower()}, headers=admin_headers).json()
+    assert [o["code"] for o in found] == [code]
+    assert client.get("/api/orders", params={"q": "tidak-ada"}, headers=admin_headers).json() == []
+
+
+def test_seed_attaches_demo_images():
+    from app import seed
+
+    p = seed.Product(name="Kopi Gayo Bubuk", slug="kopi-gayo-bubuk", price=1, stock=1)
+    assert seed.attach_demo_images(p) == 2
+    assert p.image_url == p.images[0].url and p.image_url.endswith(".webp")
+    assert seed.attach_demo_images(p) == 0  # tidak dobel

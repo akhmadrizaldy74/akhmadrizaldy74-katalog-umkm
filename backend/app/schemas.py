@@ -76,6 +76,11 @@ class ProductUpdate(BaseModel):
     category_id: int | None = None
 
 
+class ProductImageOut(ORM):
+    id: int
+    url: str
+
+
 class ProductOut(ORM):
     id: int
     name: str
@@ -86,6 +91,7 @@ class ProductOut(ORM):
     image_url: str | None
     is_active: bool
     category: CategoryOut | None
+    images: list[ProductImageOut] = []
     created_at: datetime
 
 
@@ -151,6 +157,14 @@ class TopProduct(BaseModel):
     quantity: int
 
 
+class LowStockProduct(ORM):
+    id: int
+    name: str
+    slug: str
+    stock: int
+    image_url: str | None
+
+
 class StatsOut(BaseModel):
     total_products: int
     active_products: int
@@ -158,3 +172,4 @@ class StatsOut(BaseModel):
     orders_by_status: dict[str, int]
     revenue: int
     top_products: list[TopProduct]
+    low_stock_products: list[LowStockProduct] = []
